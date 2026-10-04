@@ -1,6 +1,6 @@
 import requests
 from dotenv import load_dotenv
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from state import Article
 
@@ -33,6 +33,8 @@ def fetch_news_using_hackernews_id() -> list[Article] | None:
 
     news_data: list[Article] = []
     count = 1
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(hours=12)
     for news_id in news_ids:
         url = f"https://hacker-news.firebaseio.com/v0/item/{news_id}.json"
         try:
@@ -40,7 +42,7 @@ def fetch_news_using_hackernews_id() -> list[Article] | None:
             response.raise_for_status()
             if response.status_code == 200:
                 data = response.json()
-                if data is None:
+                if data is None or data.get("time") is None or not isinstance(data.get("time"), (int, float)) or data.get("time") <= 0 or datetime.fromtimestamp(data.get("time"), tz=timezone.utc) < cutoff:
                     continue
 
                 article = Article(
